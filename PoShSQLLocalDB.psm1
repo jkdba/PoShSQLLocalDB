@@ -235,8 +235,8 @@ function Invoke-SQLLocalDBCommand
             $ProcessInfo.UseShellExecute = $true
             $ProcessInfo.WindowStyle = 'hidden'
             $ProcessInfo.CreateNoWindow = $true
-            $ErrorOutFile = '{0}\ErrorOut.log' -f $PSScriptRoot
-            $StandardOutFile = '{0}\StandardOut.log' -f $PSScriptRoot
+            $ErrorOutFile = '{0}\output\ErrorOut.log' -f $PSScriptRoot
+            $StandardOutFile = '{0}\output\StandardOut.log' -f $PSScriptRoot
             $CommandParameters = 'sqllocaldb.exe {0} 1> "{1}" 2> "{2}"' -f $CommandParameters, $StandardOutFile, $ErrorOutFile
             $ProcessInfo.Arguments = $CommandParameters
         }
@@ -270,6 +270,8 @@ function Invoke-SQLLocalDBCommand
         {
             $SQLLocalDBProcessStandardOut = Get-Content -Path $StandardOutFile -ErrorAction SilentlyContinue
             $SQLLocalDBProcessStandardError = Get-Content -Path $ErrorOutFile -ErrorAction SilentlyContinue
+            $null = Remove-Item -Path $StandardOutFile -Force -ErrorAction SilentlyContinue
+            $null = Remove-Item -Path $ErrorOutFile -Force -ErrorAction SilentlyContinue
         }
 
         ## Get Exit Code
