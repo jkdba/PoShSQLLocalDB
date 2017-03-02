@@ -201,7 +201,7 @@ function Set-SQLLocalDBInstanceShared
         }
         
         $Command += ' "{0}" "{1}"' -f $InstanceName, $SharedInstanceName
-        Invoke-SQLLocalDBCommand -CommandParameters $Command
+        Invoke-SQLLocalDBCommand -CommandParameters $Command -RunAsAdministrator
     }
 }
 
@@ -214,7 +214,10 @@ function Invoke-SQLLocalDBCommand
     (
         [Parameter(Position=0, Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
-        [String] $CommandParameters
+        [String] $CommandParameters,
+
+        [Parameter(Position=0, Mandatory=$false)]
+        [Switch] $RunAsAdministrator
     )
     begin
     {
@@ -224,35 +227,64 @@ function Invoke-SQLLocalDBCommand
     {
         ## Build Process Start Information
         $ProcessInfo = New-Object -TypeName System.Diagnostics.ProcessStartInfo
-        $ProcessInfo.FileName = 'SQLLocalDB.exe'
-        $ProcessInfo.RedirectStandardError = $true
-        $ProcessInfo.RedirectStandardOutput = $true
-        $ProcessInfo.UseShellExecute = $false
-        $ProcessInfo.Arguments = $CommandParameters
+
+        if($RunAsAdministrator)
+        {
+            $ProcessInfo.FileName = 'PowerShell.exe'
+            $ProcessInfo.Verb = 'runas'
+            $ProcessInfo.UseShellExecute = $true
+            $ProcessInfo.WindowStyle = 'hidden'
+            $ProcessInfo.CreateNoWindow = $true
+            $ErrorOutFile = '{0}\ErrorOut.log' -f $PSScriptRoot
+            $StandardOutFile = '{0}\StandardOut.log' -f $PSScriptRoot
+            $CommandParameters = 'sqllocaldb.exe {0} 1> "{1}" 2> "{2}"' -f $CommandParameters, $StandardOutFile, $ErrorOutFile
+            $ProcessInfo.Arguments = $CommandParameters
+        }
+        else
+        {
+            $ProcessInfo.FileName = 'SQLLocalDB.exe'
+            $ProcessInfo.RedirectStandardError = $true
+            $ProcessInfo.RedirectStandardOutput = $true
+            $ProcessInfo.UseShellExecute = $false
+            $ProcessInfo.Arguments = $CommandParameters
+        }
 
         ## Build and Start Process
         $SQLLocalDBProcess = New-Object -TypeName System.Diagnostics.Process
         $SQLLocalDBProcess.StartInfo = $ProcessInfo
         $SQLLocalDBProcess.Start() | Out-Null
 
-        ## Get Outputs
-        $SQLLocalDBProcessStandardOut = $SQLLocalDBProcess.StandardOutput.ReadToEnd()
-        $SQLLocalDBProcessStandardError = $SQLLocalDBProcess.StandardError.ReadToEnd()
+        if(-not $RunAsAdministrator)
+        {
+            ## Get Outputs
+            $SQLLocalDBProcessStandardOut = $SQLLocalDBProcess.StandardOutput.ReadToEnd()
+            $SQLLocalDBProcessStandardError = $SQLLocalDBProcess.StandardError.ReadToEnd()
+        }
 
         ## Make Wait For Exit call after the ReadToEnd on Output Streams to prevent app deadlock
         ## some apps do not write to out asynchronously and making the wait for exit call before
         ## retrieving output can cause the app deadlock.
         $SQLLocalDBProcess.WaitForExit()
 
+        if($RunAsAdministrator)
+        {
+            $SQLLocalDBProcessStandardOut = Get-Content -Path $StandardOutFile -ErrorAction SilentlyContinue
+            $SQLLocalDBProcessStandardError = Get-Content -Path $ErrorOutFile -ErrorAction SilentlyContinue
+        }
+
         ## Get Exit Code
         $SQLLocalDBProcessExitCode = $SQLLocalDBProcess.ExitCode 
 
-        if($SQLLocalDBProcessExitCode -eq 0)
+        if($SQLLocalDBProcessExitCode -eq 0 -and -not $SQLLocalDBProcessStandardError)
         {
             Write-Output $SQLLocalDBProcessStandardOut
         }
         else
         {
+            if($SQLLocalDBProcessStandardOut)
+            {
+                Write-Output $SQLLocalDBProcessStandardOut
+            }
             throw $SQLLocalDBProcessStandardError
         }
     }
