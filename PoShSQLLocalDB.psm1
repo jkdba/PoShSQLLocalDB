@@ -152,7 +152,7 @@ function Get-SQLLocalDBInstance
             $Lines |  ForEach-Object { 
                 if($_ -ne '')
                 { 
-                    $Prop = [regex]::Match($_,'^.*?(?=:)').Value
+                    $Prop = [regex]::Match($_,'^.*?(?=:)').Value -replace ' ' -replace '-'
                     $Value = [regex]::Match($_,'(?<=\w:).+$').Value -replace '^ +' -replace '(?<=\w)\s+$'
                     $OutputObject | Add-Member -MemberType NoteProperty -Name $Prop -Value $Value  
                 }
