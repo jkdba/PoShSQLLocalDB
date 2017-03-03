@@ -89,6 +89,32 @@ function Stop-SQLLocalDBInstance
     }
 }
 
+function Start-SQLLocalDBTraceAPI
+{
+    [CmdletBinding()]
+    param
+    (
+    )
+    process
+    {
+        $Command = 'trace on'
+        Invoke-SQLLocalDBCommand -CommandParameters $Command
+    }
+}
+
+function Stop-SQLLocalDBTraceAPI
+{
+    [CmdletBinding()]
+    param
+    (
+    )
+    process
+    {
+        $Command = 'trace off'
+        Invoke-SQLLocalDBCommand -CommandParameters $Command
+    }
+}
+
 function Get-SQLLocalDBInstanceInformation
 {
     [CmdletBinding()]
