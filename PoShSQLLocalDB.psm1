@@ -160,7 +160,7 @@ function Get-SQLLocalDBVersions
     }
 }
 
-function Set-SQLLocalDBInstanceShared
+function Add-SQLLocalDBSharedInstance
 {
     [CmdletBinding()]
     param
@@ -205,6 +205,22 @@ function Set-SQLLocalDBInstanceShared
     }
 }
 
+function Remove-SQLLocalDBSharedInstanced
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Position=0, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [String] $SharedInstanceName
+    )
+    process
+    {
+        $Command = 'unshare "{0}"' -f $SharedInstanceName
+        Invoke-SQLLocalDBCommand -CommandParameters $Command -RunAsAdministrator
+    }
+}
+
 <#
 # Heavy Lifting
 #>
@@ -222,6 +238,13 @@ function Invoke-SQLLocalDBCommand
     begin
     {
         ##
+        if($RunAsAdministrator)
+        {
+            $ErrorOutFile = '{0}\output\ErrorOut.log' -f $PSScriptRoot
+            $StandardOutFile = '{0}\output\StandardOut.log' -f $PSScriptRoot
+            $null = Remove-Item -Path $StandardOutFile -Force -ErrorAction SilentlyContinue
+            $null = Remove-Item -Path $ErrorOutFile -Force -ErrorAction SilentlyContinue
+        }
     }
     process
     {
@@ -235,8 +258,6 @@ function Invoke-SQLLocalDBCommand
             $ProcessInfo.UseShellExecute = $true
             $ProcessInfo.WindowStyle = 'hidden'
             $ProcessInfo.CreateNoWindow = $true
-            $ErrorOutFile = '{0}\output\ErrorOut.log' -f $PSScriptRoot
-            $StandardOutFile = '{0}\output\StandardOut.log' -f $PSScriptRoot
             $CommandParameters = 'sqllocaldb.exe {0} 1> "{1}" 2> "{2}"' -f $CommandParameters, $StandardOutFile, $ErrorOutFile
             $ProcessInfo.Arguments = $CommandParameters
         }
@@ -259,18 +280,17 @@ function Invoke-SQLLocalDBCommand
             ## Get Outputs
             $SQLLocalDBProcessStandardOut = $SQLLocalDBProcess.StandardOutput.ReadToEnd()
             $SQLLocalDBProcessStandardError = $SQLLocalDBProcess.StandardError.ReadToEnd()
-            
-            ## Make Wait For Exit call after the ReadToEnd on Output Streams to prevent app deadlock
-            ## some apps do not write to out asynchronously and making the wait for exit call before
-            ## retrieving output can cause the app deadlock.
-            $SQLLocalDBProcess.WaitForExit()
         }
-        else
+
+        ## Make Wait For Exit call after the ReadToEnd on Output Streams to prevent app deadlock
+        ## some apps do not write to out asynchronously and making the wait for exit call before
+        ## retrieving output can cause the app deadlock.
+        $SQLLocalDBProcess.WaitForExit()
+
+        if($RunAsAdministrator)
         {
             $SQLLocalDBProcessStandardOut = Get-Content -Path $StandardOutFile -ErrorAction SilentlyContinue
             $SQLLocalDBProcessStandardError = Get-Content -Path $ErrorOutFile -ErrorAction SilentlyContinue
-            $null = Remove-Item -Path $StandardOutFile -Force -ErrorAction SilentlyContinue
-            $null = Remove-Item -Path $ErrorOutFile -Force -ErrorAction SilentlyContinue
         }
 
         ## Get Exit Code
@@ -285,8 +305,11 @@ function Invoke-SQLLocalDBCommand
             if($SQLLocalDBProcessStandardOut)
             {
                 Write-Output $SQLLocalDBProcessStandardOut
+
             }
-            
+
+            Write-Verbose ('exitcode: {0}.' -f $SQLLocalDBProcessExitCode)
+
             throw $SQLLocalDBProcessStandardError
         }
     }
