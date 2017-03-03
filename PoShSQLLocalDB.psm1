@@ -115,51 +115,49 @@ function Stop-SQLLocalDBTraceAPI
     }
 }
 
-function Get-SQLLocalDBInstanceInformation
-{
-    [CmdletBinding()]
-    param
-    (
-        [Parameter(Position=0, Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [String] $InstanceName
-    )
-    process
-    {
-        $Command = 'info {0}' -f $InstanceName
-        $Results = Invoke-SQLLocalDBCommand -CommandParameters $Command
-        $Lines = $Results -split "`n"
-        $OutputObject = New-Object -TypeName PSObject; 
-        $Lines |  ForEach-Object { 
-            if($_ -ne '')
-            { 
-                $Prop = [regex]::Match($_,'^.*?(?=:)').Value
-                $Value = [regex]::Match($_,'(?<=\w:).+$').Value -replace '^ +'
-                $OutputObject | Add-Member -MemberType NoteProperty -Name $Prop -Value $Value  
-            }
-        }
-        $OutputObject
-    }
-}
-
 function Get-SQLLocalDBInstance
 {
     [CmdletBinding()]
     param
     (
+        [Parameter(Position=0, Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [String[]] $InstanceName
     )
     process
     {
-        $Command = 'info'
-        $Results = Invoke-SQLLocalDBCommand -CommandParameters $Command
-        $Lines = $Results -split "`n"
-        $Lines |  ForEach-Object { 
-            if($_ -ne '')
-            {   
-                $OutputObject = New-Object -TypeName PSObject
-                $OutputObject | Add-Member -MemberType NoteProperty -Name 'InstanceName' -Value $_
-                $OutputObject
+
+        if(-not $InstanceName)
+        {
+            [String[]] $InstanceName = @()
+            $Command = 'info'
+
+            $Results = Invoke-SQLLocalDBCommand -CommandParameters $Command
+            $Lines = $Results -split "`n"
+            $Lines |  ForEach-Object {
+                if($_ -ne '')
+                {
+                    $InstanceName += $_
+                }
             }
+        }
+
+        foreach($Instance in $InstanceName)
+        {
+            $Command = 'info "{0}"' -f $Instance
+            $Results = Invoke-SQLLocalDBCommand -CommandParameters $Command
+            $Lines = $Results -split "`n"
+            $OutputObject = New-Object -TypeName PSObject; 
+            $OutputObject.PSObject.TypeNames.Insert(0,'PoShSQLLocalDB.Instance')
+            $Lines |  ForEach-Object { 
+                if($_ -ne '')
+                { 
+                    $Prop = [regex]::Match($_,'^.*?(?=:)').Value
+                    $Value = [regex]::Match($_,'(?<=\w:).+$').Value -replace '^ +' -replace '(?<=\w)\s+$'
+                    $OutputObject | Add-Member -MemberType NoteProperty -Name $Prop -Value $Value  
+                }
+            }
+            $OutputObject
         }
     }
 }
