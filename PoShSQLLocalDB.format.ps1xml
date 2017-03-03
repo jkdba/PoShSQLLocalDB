@@ -27,19 +27,19 @@
                                 <PropertyName>Owner</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>Shared Name</PropertyName>
+                                <PropertyName>SharedName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>Last Start Time</PropertyName>
+                                <PropertyName>LastStartTime</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>Instance Pipe Name</PropertyName>
+                                <PropertyName>InstancePipeName</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>Version</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>Auto-Create</PropertyName>
+                                <PropertyName>AutoCreate</PropertyName>
                             </TableColumnItem>
                         </TableColumnItems>
                     </TableRowEntry>
