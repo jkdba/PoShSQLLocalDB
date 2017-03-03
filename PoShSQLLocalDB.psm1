@@ -259,14 +259,13 @@ function Invoke-SQLLocalDBCommand
             ## Get Outputs
             $SQLLocalDBProcessStandardOut = $SQLLocalDBProcess.StandardOutput.ReadToEnd()
             $SQLLocalDBProcessStandardError = $SQLLocalDBProcess.StandardError.ReadToEnd()
+            
+            ## Make Wait For Exit call after the ReadToEnd on Output Streams to prevent app deadlock
+            ## some apps do not write to out asynchronously and making the wait for exit call before
+            ## retrieving output can cause the app deadlock.
+            $SQLLocalDBProcess.WaitForExit()
         }
-
-        ## Make Wait For Exit call after the ReadToEnd on Output Streams to prevent app deadlock
-        ## some apps do not write to out asynchronously and making the wait for exit call before
-        ## retrieving output can cause the app deadlock.
-        $SQLLocalDBProcess.WaitForExit()
-
-        if($RunAsAdministrator)
+        else
         {
             $SQLLocalDBProcessStandardOut = Get-Content -Path $StandardOutFile -ErrorAction SilentlyContinue
             $SQLLocalDBProcessStandardError = Get-Content -Path $ErrorOutFile -ErrorAction SilentlyContinue
@@ -287,6 +286,7 @@ function Invoke-SQLLocalDBCommand
             {
                 Write-Output $SQLLocalDBProcessStandardOut
             }
+            
             throw $SQLLocalDBProcessStandardError
         }
     }
