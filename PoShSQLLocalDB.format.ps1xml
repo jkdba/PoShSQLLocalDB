@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" ?>
+    <Configuration>
+    <ViewDefinitions>
+        <View>
+            <Name>PoShSQLLocalDB.Instance</Name>
+            <ViewSelectedBy>
+                <TypeName>PoShSQLLocalDB.Instance</TypeName>
+            </ViewSelectedBy>
+            <TableControl>
+                <!--<TableHeaders>
+                    <TableColumnHeader>
+                        <Label>Name</Label>
+                        <Width>50</Width>
+                        <Alignment>Left</Alignment>
+                    </TableColumnHeader>
+                </TableHeaders>-->
+                <TableRowEntries>
+                    <TableRowEntry>
+                        <TableColumnItems>
+                            <TableColumnItem>
+                                <PropertyName>Name</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>State</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Owner</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Shared Name</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Last Start Time</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Instance Pipe Name</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Version</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Auto-Create</PropertyName>
+                            </TableColumnItem>
+                        </TableColumnItems>
+                    </TableRowEntry>
+                </TableRowEntries>
+            </TableControl>
+        </View>
+    </ViewDefinitions>
+</Configuration>
