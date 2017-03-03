@@ -228,6 +228,7 @@ function Add-SQLLocalDBSharedInstance
         
         $Command += ' "{0}" "{1}"' -f $InstanceName, $SharedInstanceName
         Invoke-SQLLocalDBCommand -CommandParameters $Command -RunAsAdministrator
+        Write-Warning -Message ('You must restart the instance: "{0}" before sharing will take effect.' -f $InstanceName)
     }
 }
 
