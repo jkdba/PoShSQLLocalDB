@@ -147,14 +147,14 @@ function Get-SQLLocalDBInstance
             $Command = 'info "{0}"' -f $Instance
             $Results = Invoke-SQLLocalDBCommand -CommandParameters $Command
             $Lines = $Results -split "`n"
-            $OutputObject = New-Object -TypeName PSObject; 
+            $OutputObject = New-Object -TypeName PSObject;
             $OutputObject.PSObject.TypeNames.Insert(0,'PoShSQLLocalDB.Instance')
-            $Lines |  ForEach-Object { 
+            $Lines |  ForEach-Object {
                 if($_ -ne '')
-                { 
+                {
                     $Prop = [regex]::Match($_,'^.*?(?=:)').Value -replace ' ' -replace '-'
                     $Value = [regex]::Match($_,'(?<=\w:).+$').Value -replace '^ +' -replace '(?<=\w)\s+$'
-                    $OutputObject | Add-Member -MemberType NoteProperty -Name $Prop -Value $Value  
+                    $OutputObject | Add-Member -MemberType NoteProperty -Name $Prop -Value $Value
                 }
             }
             $OutputObject
@@ -173,9 +173,9 @@ function Get-SQLLocalDBVersions
         $Command = 'versions'
         $Results = Invoke-SQLLocalDBCommand -CommandParameters $Command
         $Lines = $Results -split "`n"
-        $Lines |  ForEach-Object { 
+        $Lines |  ForEach-Object {
             if($_ -ne '')
-            {   
+            {
                 $OutputObject = New-Object -TypeName PSObject
                 $OutputObject | Add-Member -MemberType NoteProperty -Name 'Version' -Value $_
                 $OutputObject
@@ -223,7 +223,7 @@ function Add-SQLLocalDBSharedInstance
         {
             $Command += ' ""'
         }
-        
+
         $Command += ' "{0}" "{1}"' -f $InstanceName, $SharedInstanceName
         Invoke-SQLLocalDBCommand -CommandParameters $Command -RunAsAdministrator
         Write-Warning -Message ('You must restart the instance: "{0}" before sharing will take effect.' -f $InstanceName)
@@ -319,7 +319,7 @@ function Invoke-SQLLocalDBCommand
         }
 
         ## Get Exit Code
-        $SQLLocalDBProcessExitCode = $SQLLocalDBProcess.ExitCode 
+        $SQLLocalDBProcessExitCode = $SQLLocalDBProcess.ExitCode
 
         if($SQLLocalDBProcessExitCode -eq 0 -and -not $SQLLocalDBProcessStandardError)
         {
@@ -336,6 +336,65 @@ function Invoke-SQLLocalDBCommand
             Write-Verbose ('exitcode: {0}.' -f $SQLLocalDBProcessExitCode)
 
             throw $SQLLocalDBProcessStandardError
+        }
+    }
+}
+
+## Consider dynamic param for version
+## Consider friendly version name parameter list
+function Find-SQLLocalDBBinary
+{
+    <#
+        .SYNOPSIS
+
+        .DESCRIPTION
+
+        .PARAMETER
+        .EXAMPLE
+        .NOTES
+        .INPUTS
+        .OUTPUTS
+    #>
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Position=0, Mandatory=$false)]
+        [ValidateSet('120','130')]
+        [String] $SQLVersion
+    )
+    begin
+    {
+        [String] $BaseSQLInstallRegistry = 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\'
+        [String] $ClientToolsSubPath = 'tools\ClientSetup'
+        [String] $LocalDBEXE = 'SQLLocalDB.exe'
+    }
+    process
+    {
+        $PossibleLocations = Get-ChildItem $BaseSQLInstallRegistry | Where-Object { ($_.PSChildName -match '^\d+$') -and (Test-Path (Join-Path $_.PSPath $ClientToolsSubPath)) -and ($_.PSChildName -ilike "*$SQLVersion")}
+
+        foreach($Install in $PossibleLocations)
+        {
+            $ToolsBinnPath = (Get-Item (Join-Path $Install.PSPath $ClientToolsSubPath)).GetValue('Path')
+            if($ToolsBinnPath)
+            {
+                $BinPath = if(Test-Path (Join-Path $ToolsBinnPath $LocalDBEXE))
+                {
+                    Join-Path $ToolsBinnPath $LocalDBEXE
+                }
+                if($BinPath){ $MessagePart = 'found' }
+                else{ $MessagePart = 'not found'}
+
+                Write-Verbose -Message ('SQLLocalDB.exe was {0} for version: "{1}". Bin Path: "{2}".' -f $MessagePart, $Install.PSChildName, $BinPath)
+            }
+        }
+
+        if(-not $BinPath)
+        {
+            Throw 'SQLLocalDB is not installed'
+        }
+        else
+        {
+            $BinPath
         }
     }
 }
