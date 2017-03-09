@@ -397,7 +397,7 @@ function Find-SQLLocalDBBinary
 
         if(-not $BinPath)
         {
-            Throw 'SQLLocalDB is not installed'
+            Throw 'Unable to locate SQLLocalDB.exe. It is not installed.'
         }
         else
         {
