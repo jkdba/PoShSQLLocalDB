@@ -32,10 +32,18 @@ function Remove-SQLLocalDBInstance
     (
         [Parameter(Position=0, Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
-        [String] $InstanceName
+        [String] $InstanceName,
+
+        [Parameter(Position=1, Mandatory=$false)]
+        [Switch] $Force
     )
     process
     {
+        if($Force)
+        {
+            Stop-SQLLocalDBInstance -InstanceName $InstanceName -ShutdownNOWAIT
+        }
+
         $Command = 'delete {0}' -f $InstanceName
         Invoke-SQLLocalDBCommand -CommandParameters $Command
     }
@@ -59,30 +67,34 @@ function Start-SQLLocalDBInstance
 
 function Stop-SQLLocalDBInstance
 {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='BASIC')]
     param
     (
-        [Parameter(Position=0, Mandatory=$true)]
+        [Parameter(Position=0, Mandatory=$true, ParameterSetName='BASIC')]
+        [Parameter(Position=0, Mandatory=$true, ParameterSetName='NOWAIT')]
+        [Parameter(Position=0, Mandatory=$true, ParameterSetName='KILL')]
         [ValidateNotNullOrEmpty()]
         [String] $InstanceName,
 
+        # [Parameter(Position=1, Mandatory=$false, ParameterSetName='BASIC')]
         [Parameter(Position=1, Mandatory=$false, ParameterSetName='NOWAIT')]
         [Switch] $ShutdownNOWAIT,
 
+        # [Parameter(Position=2, Mandatory=$false, ParameterSetName='BASIC')]
         [Parameter(Position=2, Mandatory=$false, ParameterSetName='KILL')]
         [Switch] $ExternalKill
     )
     process
     {
-        $Command = 'stop {0} ' -f $InstanceName
+        $Command = 'stop "{0}"' -f $InstanceName
 
         if($ShutdownNOWAIT)
         {
-            $Command += '-i'
+            $Command += ' -i'
         }
         elseif($ExternalKill)
         {
-            $Command += '-k'
+            $Command += ' -k'
         }
 
         Invoke-SQLLocalDBCommand -CommandParameters $Command
@@ -297,6 +309,7 @@ function Invoke-SQLLocalDBCommand
             $ProcessInfo.CreateNoWindow = $true
             $CommandParameters = '"{0}" {1} 1> "{2}" 2> "{3}"' -f $SQLLocalDBPath, $CommandParameters, $StandardOutFile, $ErrorOutFile
             $ProcessInfo.Arguments = $CommandParameters
+            Write-Verbose -Message ('Executing SQLLocalDB command as Admin: {0}' -f $CommandParameters);
         }
         else
         {
@@ -305,6 +318,7 @@ function Invoke-SQLLocalDBCommand
             $ProcessInfo.RedirectStandardOutput = $true
             $ProcessInfo.UseShellExecute = $false
             $ProcessInfo.Arguments = $CommandParameters
+            Write-Verbose -Message ('Executing SQLLocalDB command: SQLLocalDB.exe {0}' -f $CommandParameters);
         }
 
         ## Build and Start Process
