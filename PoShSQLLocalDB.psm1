@@ -152,7 +152,7 @@ function Get-SQLLocalDBInstance
             $Lines |  ForEach-Object {
                 if($_ -ne '')
                 {
-                    $Prop = [regex]::Match($_,'^.*?(?=:)').Value -replace ' ' -replace '-'
+                    $Prop = ([regex]::Match($_,'^.*?(?=:)').Value -split ' ' -split '-' | ForEach-Object { $CamelArr = $_ -split ''; $CamelArr[1] = $CamelArr[1].ToUpper(); $CamelArr -join '' }) -join ''
                     $Value = [regex]::Match($_,'(?<=\w:).+$').Value -replace '^ +' -replace '(?<=\w)\s+$'
                     $OutputObject | Add-Member -MemberType NoteProperty -Name $Prop -Value $Value
                 }
