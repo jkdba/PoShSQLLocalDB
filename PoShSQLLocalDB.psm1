@@ -20,7 +20,7 @@ function New-SQLLocalDBInstance
     )
     process
     {
-        $Command = 'create {0}' -f $InstanceName
+        $Command = 'create "{0}"' -f $InstanceName
         Invoke-SQLLocalDBCommand -CommandParameters $Command
     }
 }
@@ -44,7 +44,7 @@ function Remove-SQLLocalDBInstance
             Stop-SQLLocalDBInstance -InstanceName $InstanceName -ShutdownNOWAIT
         }
 
-        $Command = 'delete {0}' -f $InstanceName
+        $Command = 'delete "{0}"' -f $InstanceName
         Invoke-SQLLocalDBCommand -CommandParameters $Command
     }
 }
@@ -60,7 +60,7 @@ function Start-SQLLocalDBInstance
     )
     process
     {
-        $Command = 'start {0}' -f $InstanceName
+        $Command = 'start "{0}"' -f $InstanceName
         Invoke-SQLLocalDBCommand -CommandParameters $Command
     }
 }
