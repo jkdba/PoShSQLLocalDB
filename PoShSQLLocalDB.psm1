@@ -381,8 +381,15 @@ function Find-SQLLocalDBBinary
                 {
                     Join-Path $ToolsBinnPath $LocalDBEXE
                 }
-                if($BinPath){ $MessagePart = 'found' }
-                else{ $MessagePart = 'not found'}
+
+                if($BinPath)
+                {
+                    $MessagePart = 'found'
+                }
+                else
+                {
+                    $MessagePart = 'not found'
+                }
 
                 Write-Verbose -Message ('SQLLocalDB.exe was {0} for version: "{1}". Bin Path: "{2}".' -f $MessagePart, $Install.PSChildName, $BinPath)
             }
