@@ -177,7 +177,8 @@ function Get-SQLLocalDBVersions
             if($_ -ne '')
             {
                 $OutputObject = New-Object -TypeName PSObject
-                $OutputObject | Add-Member -MemberType NoteProperty -Name 'Version' -Value $_
+                $OutputObject.PSObject.TypeNames.Insert(0,'PoShSQLLocalDB.Version')
+                $OutputObject | Add-Member -MemberType NoteProperty -Name 'Version' -Value ($_ -replace '^ +' -replace '(?<=\w)\s+$')
                 $OutputObject
             }
         }
