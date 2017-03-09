@@ -20,7 +20,7 @@ function New-SQLLocalDBInstance
     )
     process
     {
-        $Command = 'create {0}' -f $InstanceName
+        $Command = 'create "{0}"' -f $InstanceName
         Invoke-SQLLocalDBCommand -CommandParameters $Command
     }
 }
@@ -32,11 +32,19 @@ function Remove-SQLLocalDBInstance
     (
         [Parameter(Position=0, Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
-        [String] $InstanceName
+        [String] $InstanceName,
+
+        [Parameter(Position=1, Mandatory=$false)]
+        [Switch] $Force
     )
     process
     {
-        $Command = 'delete {0}' -f $InstanceName
+        if($Force)
+        {
+            Stop-SQLLocalDBInstance -InstanceName $InstanceName -ShutdownNOWAIT
+        }
+
+        $Command = 'delete "{0}"' -f $InstanceName
         Invoke-SQLLocalDBCommand -CommandParameters $Command
     }
 }
@@ -52,37 +60,41 @@ function Start-SQLLocalDBInstance
     )
     process
     {
-        $Command = 'start {0}' -f $InstanceName
+        $Command = 'start "{0}"' -f $InstanceName
         Invoke-SQLLocalDBCommand -CommandParameters $Command
     }
 }
 
 function Stop-SQLLocalDBInstance
 {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='BASIC')]
     param
     (
-        [Parameter(Position=0, Mandatory=$true)]
+        [Parameter(Position=0, Mandatory=$true, ParameterSetName='BASIC')]
+        [Parameter(Position=0, Mandatory=$true, ParameterSetName='NOWAIT')]
+        [Parameter(Position=0, Mandatory=$true, ParameterSetName='KILL')]
         [ValidateNotNullOrEmpty()]
         [String] $InstanceName,
 
+        # [Parameter(Position=1, Mandatory=$false, ParameterSetName='BASIC')]
         [Parameter(Position=1, Mandatory=$false, ParameterSetName='NOWAIT')]
         [Switch] $ShutdownNOWAIT,
 
+        # [Parameter(Position=2, Mandatory=$false, ParameterSetName='BASIC')]
         [Parameter(Position=2, Mandatory=$false, ParameterSetName='KILL')]
         [Switch] $ExternalKill
     )
     process
     {
-        $Command = 'stop {0} ' -f $InstanceName
+        $Command = 'stop "{0}"' -f $InstanceName
 
         if($ShutdownNOWAIT)
         {
-            $Command += '-i'
+            $Command += ' -i'
         }
         elseif($ExternalKill)
         {
-            $Command += '-k'
+            $Command += ' -k'
         }
 
         Invoke-SQLLocalDBCommand -CommandParameters $Command
@@ -147,14 +159,14 @@ function Get-SQLLocalDBInstance
             $Command = 'info "{0}"' -f $Instance
             $Results = Invoke-SQLLocalDBCommand -CommandParameters $Command
             $Lines = $Results -split "`n"
-            $OutputObject = New-Object -TypeName PSObject; 
+            $OutputObject = New-Object -TypeName PSObject;
             $OutputObject.PSObject.TypeNames.Insert(0,'PoShSQLLocalDB.Instance')
-            $Lines |  ForEach-Object { 
+            $Lines |  ForEach-Object {
                 if($_ -ne '')
-                { 
-                    $Prop = [regex]::Match($_,'^.*?(?=:)').Value -replace ' ' -replace '-'
+                {
+                    $Prop = ([regex]::Match($_,'^.*?(?=:)').Value -split ' ' -split '-' | ForEach-Object { $CamelArr = $_ -split ''; $CamelArr[1] = $CamelArr[1].ToUpper(); $CamelArr -join '' }) -join ''
                     $Value = [regex]::Match($_,'(?<=\w:).+$').Value -replace '^ +' -replace '(?<=\w)\s+$'
-                    $OutputObject | Add-Member -MemberType NoteProperty -Name $Prop -Value $Value  
+                    $OutputObject | Add-Member -MemberType NoteProperty -Name $Prop -Value $Value
                 }
             }
             $OutputObject
@@ -173,11 +185,12 @@ function Get-SQLLocalDBVersions
         $Command = 'versions'
         $Results = Invoke-SQLLocalDBCommand -CommandParameters $Command
         $Lines = $Results -split "`n"
-        $Lines |  ForEach-Object { 
+        $Lines |  ForEach-Object {
             if($_ -ne '')
-            {   
+            {
                 $OutputObject = New-Object -TypeName PSObject
-                $OutputObject | Add-Member -MemberType NoteProperty -Name 'Version' -Value $_
+                $OutputObject.PSObject.TypeNames.Insert(0,'PoShSQLLocalDB.Version')
+                $OutputObject | Add-Member -MemberType NoteProperty -Name 'Version' -Value ($_ -replace '^ +' -replace '(?<=\w)\s+$')
                 $OutputObject
             }
         }
@@ -223,14 +236,14 @@ function Add-SQLLocalDBSharedInstance
         {
             $Command += ' ""'
         }
-        
+
         $Command += ' "{0}" "{1}"' -f $InstanceName, $SharedInstanceName
         Invoke-SQLLocalDBCommand -CommandParameters $Command -RunAsAdministrator
         Write-Warning -Message ('You must restart the instance: "{0}" before sharing will take effect.' -f $InstanceName)
     }
 }
 
-function Remove-SQLLocalDBSharedInstanced
+function Remove-SQLLocalDBSharedInstance
 {
     [CmdletBinding()]
     param
@@ -270,6 +283,17 @@ function Invoke-SQLLocalDBCommand
             $null = Remove-Item -Path $StandardOutFile -Force -ErrorAction SilentlyContinue
             $null = Remove-Item -Path $ErrorOutFile -Force -ErrorAction SilentlyContinue
         }
+
+        if(-not (Get-Command -Name 'SqlLocalDB.exe' -ErrorAction SilentlyContinue))
+        {
+            Write-Verbose -Message 'SQLLocalDB.exe is not the Environment Path attempting to locate the install.'
+            $SQLLocalDBPath = Find-SQLLocalDBBinary
+            Write-Verbose -Message ('Using latest version found: "{0}"' -f $SQLLocalDBPath)
+        }
+        else
+        {
+            $SQLLocalDBPath = 'SQLLocalDB.exe'
+        }
     }
     process
     {
@@ -283,16 +307,18 @@ function Invoke-SQLLocalDBCommand
             $ProcessInfo.UseShellExecute = $true
             $ProcessInfo.WindowStyle = 'hidden'
             $ProcessInfo.CreateNoWindow = $true
-            $CommandParameters = 'sqllocaldb.exe {0} 1> "{1}" 2> "{2}"' -f $CommandParameters, $StandardOutFile, $ErrorOutFile
+            $CommandParameters = '"{0}" {1} 1> "{2}" 2> "{3}"' -f $SQLLocalDBPath, $CommandParameters, $StandardOutFile, $ErrorOutFile
             $ProcessInfo.Arguments = $CommandParameters
+            Write-Verbose -Message ('Executing SQLLocalDB command as Admin: {0}' -f $CommandParameters);
         }
         else
         {
-            $ProcessInfo.FileName = 'SQLLocalDB.exe'
+            $ProcessInfo.FileName = "$SQLLocalDBPath"
             $ProcessInfo.RedirectStandardError = $true
             $ProcessInfo.RedirectStandardOutput = $true
             $ProcessInfo.UseShellExecute = $false
             $ProcessInfo.Arguments = $CommandParameters
+            Write-Verbose -Message ('Executing SQLLocalDB command: SQLLocalDB.exe {0}' -f $CommandParameters);
         }
 
         ## Build and Start Process
@@ -319,7 +345,7 @@ function Invoke-SQLLocalDBCommand
         }
 
         ## Get Exit Code
-        $SQLLocalDBProcessExitCode = $SQLLocalDBProcess.ExitCode 
+        $SQLLocalDBProcessExitCode = $SQLLocalDBProcess.ExitCode
 
         if($SQLLocalDBProcessExitCode -eq 0 -and -not $SQLLocalDBProcessStandardError)
         {
@@ -336,6 +362,72 @@ function Invoke-SQLLocalDBCommand
             Write-Verbose ('exitcode: {0}.' -f $SQLLocalDBProcessExitCode)
 
             throw $SQLLocalDBProcessStandardError
+        }
+    }
+}
+
+## Consider dynamic param for version
+## Consider friendly version name parameter list
+function Find-SQLLocalDBBinary
+{
+    <#
+        .SYNOPSIS
+
+        .DESCRIPTION
+
+        .PARAMETER
+        .EXAMPLE
+        .NOTES
+        .INPUTS
+        .OUTPUTS
+    #>
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Position=0, Mandatory=$false)]
+        [ValidateSet('120','130')]
+        [String] $SQLVersion
+    )
+    begin
+    {
+        [String] $BaseSQLInstallRegistry = 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\'
+        [String] $ClientToolsSubPath = 'tools\ClientSetup'
+        [String] $LocalDBEXE = 'SQLLocalDB.exe'
+    }
+    process
+    {
+        $PossibleLocations = Get-ChildItem $BaseSQLInstallRegistry | Where-Object { ($_.PSChildName -match '^\d+$') -and (Test-Path (Join-Path $_.PSPath $ClientToolsSubPath)) -and ($_.PSChildName -ilike "*$SQLVersion")}
+
+        foreach($Install in $PossibleLocations)
+        {
+            $ToolsBinnPath = (Get-Item (Join-Path $Install.PSPath $ClientToolsSubPath)).GetValue('Path')
+            if($ToolsBinnPath)
+            {
+                $BinPath = if(Test-Path (Join-Path $ToolsBinnPath $LocalDBEXE))
+                {
+                    Join-Path $ToolsBinnPath $LocalDBEXE
+                }
+
+                if($BinPath)
+                {
+                    $MessagePart = 'found'
+                }
+                else
+                {
+                    $MessagePart = 'not found'
+                }
+
+                Write-Verbose -Message ('SQLLocalDB.exe was {0} for version: "{1}". Bin Path: "{2}".' -f $MessagePart, $Install.PSChildName, $BinPath)
+            }
+        }
+
+        if(-not $BinPath)
+        {
+            Throw 'Unable to locate SQLLocalDB.exe. It is not installed.'
+        }
+        else
+        {
+            $BinPath
         }
     }
 }

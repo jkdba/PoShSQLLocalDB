@@ -46,5 +46,29 @@
                 </TableRowEntries>
             </TableControl>
         </View>
+        <View>
+            <Name>PoShSQLLocalDB.Version</Name>
+            <ViewSelectedBy>
+                <TypeName>PoShSQLLocalDB.Version</TypeName>
+            </ViewSelectedBy>
+            <TableControl>
+                <TableHeaders>
+                    <TableColumnHeader>
+                        <Label>Version</Label>
+                        <Width>45</Width>
+                        <Alignment>Left</Alignment>
+                    </TableColumnHeader>
+                </TableHeaders>
+                <TableRowEntries>
+                    <TableRowEntry>
+                        <TableColumnItems>
+                            <TableColumnItem>
+                                <PropertyName>Version</PropertyName>
+                            </TableColumnItem>
+                        </TableColumnItems>
+                    </TableRowEntry>
+                </TableRowEntries>
+            </TableControl>
+        </View>
     </ViewDefinitions>
 </Configuration>
