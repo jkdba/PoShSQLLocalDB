@@ -271,6 +271,17 @@ function Invoke-SQLLocalDBCommand
             $null = Remove-Item -Path $StandardOutFile -Force -ErrorAction SilentlyContinue
             $null = Remove-Item -Path $ErrorOutFile -Force -ErrorAction SilentlyContinue
         }
+
+        if(-not (Get-Command -Name 'SqlLocalDB.exe' -ErrorAction SilentlyContinue))
+        {
+            Write-Verbose -Message 'SQLLocalDB.exe is not the Environment Path attempting to locate the install.'
+            $SQLLocalDBPath = Find-SQLLocalDBBinary
+            Write-Verbose -Message ('Using latest version found: "{0}"' -f $SQLLocalDBPath)
+        }
+        else
+        {
+            $SQLLocalDBPath = 'SQLLocalDB.exe'
+        }
     }
     process
     {
@@ -284,12 +295,12 @@ function Invoke-SQLLocalDBCommand
             $ProcessInfo.UseShellExecute = $true
             $ProcessInfo.WindowStyle = 'hidden'
             $ProcessInfo.CreateNoWindow = $true
-            $CommandParameters = 'sqllocaldb.exe {0} 1> "{1}" 2> "{2}"' -f $CommandParameters, $StandardOutFile, $ErrorOutFile
+            $CommandParameters = '"{0}" {1} 1> "{2}" 2> "{3}"' -f $SQLLocalDBPath, $CommandParameters, $StandardOutFile, $ErrorOutFile
             $ProcessInfo.Arguments = $CommandParameters
         }
         else
         {
-            $ProcessInfo.FileName = 'SQLLocalDB.exe'
+            $ProcessInfo.FileName = "$SQLLocalDBPath"
             $ProcessInfo.RedirectStandardError = $true
             $ProcessInfo.RedirectStandardOutput = $true
             $ProcessInfo.UseShellExecute = $false
