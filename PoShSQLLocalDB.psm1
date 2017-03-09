@@ -230,7 +230,7 @@ function Add-SQLLocalDBSharedInstance
     }
 }
 
-function Remove-SQLLocalDBSharedInstanced
+function Remove-SQLLocalDBSharedInstance
 {
     [CmdletBinding()]
     param
